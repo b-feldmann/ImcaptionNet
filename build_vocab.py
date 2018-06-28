@@ -2,7 +2,7 @@ import nltk
 import pickle
 import argparse
 from collections import Counter
-from cocoapi.PythonAPI.pycocotools.coco import COCO
+from cocoapi2.PythonAPI.pycocotools.coco import COCO
 
 
 class Vocabulary(object):
