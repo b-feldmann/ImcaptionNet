@@ -1,7 +1,0 @@
-name: imcaptionnet-cpu
-dependencies: 
-  - python=3.6.5
-  - pip:
-    - tensorflow
-    - h5py
-    - Pillow
