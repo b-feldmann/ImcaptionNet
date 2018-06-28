@@ -5,7 +5,7 @@ import torch
 import torch.utils.data as data
 from PIL import Image
 
-from cocoapi.PythonAPI.pycocotools.coco import COCO
+from cocoapi2.PythonAPI.pycocotools.coco import COCO
 
 
 class CocoDataset(data.Dataset):
@@ -36,17 +36,17 @@ class CocoDataset(data.Dataset):
         img_id = coco.anns[ann_id]['image_id']
         filename = coco.loadImgs(img_id)[0]['file_name']
 
-        if 'val' in filename.lower():
-            path = 'val2014/' + filename
-        else:
-            path = 'train2014/' + filename
+        # if 'val' in filename.lower():
+        #     path = 'val2014/' + filename
+        # else:
+        path = 'train2014/' + filename
 
         image = Image.open(os.path.join(self.root, path)).convert('RGB')
         if self.transform is not None:
             image = self.transform(image)
 
         # Convert caption (string) to word ids.
-        tokens = str(caption).lower().translate(None, string.punctuation).strip().split()
+        tokens = str(caption).lower().translate(string.punctuation).strip().split()
         caption = []
         caption.append(vocab('<start>'))
         caption.extend([vocab(token) for token in tokens])

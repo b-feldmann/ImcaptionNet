@@ -30,8 +30,8 @@ class AttentiveCNN(nn.Module):
 
     def init_weights(self):
         """Initialize the weights."""
-        init.kaiming_uniform(self.affine_a.weight, mode='fan_in')
-        init.kaiming_uniform(self.affine_b.weight, mode='fan_in')
+        nn.init.kaiming_uniform_(self.affine_a.weight, mode='fan_in')
+        nn.init.kaiming_uniform_(self.affine_b.weight, mode='fan_in')
         self.affine_a.bias.data.fill_(0)
         self.affine_b.bias.data.fill_(0)
 
@@ -72,10 +72,10 @@ class Atten(nn.Module):
 
     def init_weights(self):
         """Initialize the weights."""
-        init.xavier_uniform(self.affine_v.weight)
-        init.xavier_uniform(self.affine_g.weight)
-        init.xavier_uniform(self.affine_h.weight)
-        init.xavier_uniform(self.affine_s.weight)
+        nn.init.xavier_uniform_(self.affine_v.weight)
+        nn.init.xavier_uniform_(self.affine_g.weight)
+        nn.init.xavier_uniform_(self.affine_h.weight)
+        nn.init.xavier_uniform_(self.affine_s.weight)
 
     def forward(self, V, h_t, s_t):
         '''
@@ -89,7 +89,7 @@ class Atten(nn.Module):
 
         # z_t = W_h * tanh( content_v )
         z_t = self.affine_h(self.dropout(F.tanh(content_v))).squeeze(3)
-        alpha_t = F.softmax(z_t.view(-1, z_t.size(2))).view(z_t.size(0), z_t.size(1), -1)
+        alpha_t = F.softmax(z_t.view(-1, z_t.size(2)), dim=0).view(z_t.size(0), z_t.size(1), -1)
 
         # Construct c_t: B x seq x hidden_size
         c_t = torch.bmm(alpha_t, V).squeeze(2)
@@ -101,7 +101,7 @@ class Atten(nn.Module):
 
         # Attention score between sentinel and image content
         extended = torch.cat((z_t, z_t_extended), dim=2)
-        alpha_hat_t = F.softmax(extended.view(-1, extended.size(2))).view(extended.size(0), extended.size(1), -1)
+        alpha_hat_t = F.softmax(extended.view(-1, extended.size(2)), dim=0).view(extended.size(0), extended.size(1), -1)
         beta_t = alpha_hat_t[:, :, -1]
 
         # c_hat_t = beta * s_t + ( 1 - beta ) * c_t
@@ -125,8 +125,8 @@ class Sentinel(nn.Module):
         self.init_weights()
 
     def init_weights(self):
-        init.xavier_uniform(self.affine_x.weight)
-        init.xavier_uniform(self.affine_h.weight)
+        nn.init.xavier_uniform_(self.affine_x.weight)
+        nn.init.xavier_uniform_(self.affine_h.weight)
 
     def forward(self, x_t, h_t_1, cell_t):
         # g_t = sigmoid( W_x * x_t + W_h * h_(t-1) )
@@ -163,7 +163,7 @@ class AdaptiveBlock(nn.Module):
         '''
         Initialize final classifier weights
         '''
-        init.kaiming_normal(self.mlp.weight, mode='fan_in')
+        nn.init.kaiming_normal_(self.mlp.weight, mode='fan_in')
         self.mlp.bias.data.fill_(0)
 
     def forward(self, x, hiddens, cells, V):
