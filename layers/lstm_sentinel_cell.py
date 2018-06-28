@@ -41,13 +41,13 @@ class LSTMSentinelCell(Layer):
     self.sentinel = sentinel
     if self.dropout_W or self.dropout_U:
       self.uses_learning_phase = True
-    self.state_size = units
+    self.state_size = [units, units]
+    # self.state_size = units
 
   def build(self, input_shape):
-    input_dim = input_shape[2]
+    input_dim = input_shape[1]
     self.input_dim = input_dim
 
-    input_dim = input_dim.value
     self.W_i = self.add_weight(
         shape=(input_dim, self.units), name='{}_W_i'.format(self.name),
         initializer=self.W_initializer)
@@ -102,11 +102,11 @@ class LSTMSentinelCell(Layer):
 
     self.built = True
 
-  def call(self, x, states, training=None):
+  def call(self, x, states, training=None, constants=None):
     h_tm1 = states[0]
     c_tm1 = states[1]
-    B_U = states[2]
-    B_W = states[3]
+    B_U = constants[0]
+    B_W = constants[1]
 
     x_i = K.dot(x, self.W_i) + self.b_i
     x_f = K.dot(x * B_W[1], self.W_f) + self.b_f

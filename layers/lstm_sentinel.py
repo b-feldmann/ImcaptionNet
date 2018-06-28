@@ -47,76 +47,6 @@ class LSTMSentinel(RNN):
         unroll=unroll,
         **kwargs)
 
-  def reset_states(self):
-    assert self.stateful, 'Layer must be stateful.'
-    input_shape = self.input_spec[0].shape
-    if not input_shape[0]:
-      raise Exception('If a RNN is stateful, a complete ' +
-                      'input_shape must be provided (including batch size).')
-    if hasattr(self, 'states') and self.states[0] is not None:
-      K.set_value(self.states[0],
-                  np.zeros((input_shape[0], self.units)))
-      K.set_value(self.states[1],
-                  np.zeros((input_shape[0], self.units)))
-    else:
-      self.states = [K.zeros((input_shape[0], self.units)),
-                     K.zeros((input_shape[0], self.units))]
-
-  def build(self, input_shape):
-    self.input_spec = [InputSpec(shape=input_shape)]
-
-    # Note input_shape will be list of shapes of initial states and
-    # constants if these are passed in __call__.
-    if self._num_constants is not None:
-      constants_shape = input_shape[-self._num_constants:]
-    else:
-      constants_shape = None
-
-    if isinstance(input_shape, list):
-      input_shape = input_shape[0]
-
-    batch_size = input_shape[0] if self.stateful else None
-    input_dim = input_shape[-1]
-
-    # allow cell (if layer) to build before we set or validate state_spec
-    if isinstance(self.cell, Layer):
-      # step_input_shape = (input_shape[0],) + input_shape[2:]
-      if constants_shape is not None:
-        # self.cell.build([step_input_shape] + constants_shape)
-        self.cell.build(input_shape)
-      else:
-        # self.cell.build(step_input_shape)
-        self.cell.build(input_shape)
-
-    # set or validate state_spec
-    if hasattr(self.cell.state_size, '__len__'):
-      state_size = list(self.cell.state_size)
-    else:
-      state_size = [self.cell.state_size]
-
-    if self.state_spec is not None:
-      # initial_state was passed in call, check compatibility
-      if [spec.shape[-1] for spec in self.state_spec] != state_size:
-        raise ValueError(
-            'An `initial_state` was passed that is not compatible with '
-            '`cell.state_size`. Received `state_spec`={}; '
-            'however `cell.state_size` is '
-            '{}'.format(self.state_spec, self.cell.state_size))
-    else:
-      self.state_spec = [InputSpec(shape=(None, dim))
-                         for dim in state_size]
-
-    if self.stateful:
-      self.reset_states()
-    else:
-      if self.sentinel:
-        # initial states: 2 all-zero tensors of shape (units)
-        self.states = [None, None]
-      else:
-        self.states = [None]
-
-    self.built = True
-
   def get_constants(self, x):
     constants = []
     if self.sentinel:
@@ -138,50 +68,11 @@ class LSTMSentinel(RNN):
            training=None,
            initial_state=None,
            constants=None):
-    # input shape: (nb_samples, time (padded with zeros), input_dim)
-    # note that the .build() method of subclasses MUST define
-    # self.input_sepc with a complete input shape.
-    input_shape = self.input_spec[0].shape
-
-    if self.stateful:
-      initial_states = self.states
-    else:
-      initial_states = self.get_initial_states(inputs)
     constants = self.get_constants(inputs)
-
-    def step(inputs, states):
-      return self.cell.call(inputs, states)
-
-    last_output, outputs, states = K.rnn(step,
-                                         inputs,
-                                         initial_states,
-                                         go_backwards=self.go_backwards,
-                                         mask=mask,
-                                         constants=constants,
-                                         unroll=self.unroll,
-                                         input_length=input_shape[1])
-
-    if self.stateful:
-      updates = []
-      for i in range(len(states)):
-          updates.append((self.states[i], states[i]))
-      self.add_update(updates, inputs)
-
-    # we need to reorder the batch position, as the default K.rnn()
-    # assumes that the output is a single tensor.
-    if self.sentinel:
-      outputs = K.permute_dimensions(outputs, [0, 2, 1, 3])
-      # returns a list where the first element
-      # is the hidden state and the second sentinel
-      if self.return_sequences:
-        return [outputs[0], outputs[1]]
-      else:
-        return [last_output[0], last_output[1]]
-    else:
-      if self.return_sequences:
-        return outputs
-      else:
-        return last_output
+    self._num_constants = 2
+    return super(LSTMSentinel, self).call(
+        inputs, mask=mask, training=training, initial_state=initial_state,
+        constants=constants)
 
   @property
   def units(self):

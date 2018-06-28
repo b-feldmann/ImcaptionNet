@@ -26,7 +26,7 @@ def get_encoder_model(inp, inp_shape):
       input_shape=inp_shape)
   # EXPERIMENT: Testen ob wir die Activation (-2) oder das Pooling (-1) benutzen
   encoder = Model(
-      name='Encoder-Resnet50',
+      # name='Encoder-Resnet50',
       inputs=base_resnet50.input,
       outputs=[base_resnet50.layers[-2].output])
   return encoder
@@ -67,7 +67,7 @@ def get_decoder_model(args_dict, wh, dim, convfeats, prev_words):
   if args_dict.dr:
     emb = Dropout(args_dict.dr_ratio)(emb)
 
-  x = Concatenate()([x, emb])
+  x = Concatenate(name='lstm_in')([x, emb])
   if args_dict.dr:
     x = Dropout(args_dict.dr_ratio)(x)
   if args_dict.sgate:
@@ -103,6 +103,7 @@ def get_decoder_model(args_dict, wh, dim, convfeats, prev_words):
     h_out_embed = Conv1D(
         args_dict.emb_dim, 1, name='zh_embed', padding='same')(h_out_linear)
     # repeat all h vectors as many times as local feats in v
+    # ERROR
     z_h_embed = TimeDistributed(RepeatVector(num_vfeats))(h_out_embed)
 
     # repeat all image vectors as many times as timesteps (seqlen)
@@ -133,8 +134,9 @@ def get_decoder_model(args_dict, wh, dim, convfeats, prev_words):
       z_v_linear = Concatenate(-2)([z_v_linear, z_s_linear])
       z_v_embed = Concatenate(-2)([z_v_embed, z_s_embed])
 
+
     # sum outputs from z_v and z_h
-    z = Add(name='sum_v_h')([z_h_embed, z_v_embed])
+    z = Add(name='merge_v_h')([z_h_embed, z_v_embed])
     if args_dict.dr:
       z = Dropout(args_dict.dr_ratio)(z)
     z = TimeDistributed(Activation('tanh', name='merge_v_h_tanh'))(z)
@@ -147,6 +149,7 @@ def get_decoder_model(args_dict, wh, dim, convfeats, prev_words):
     att = TimeDistributed(RepeatVector(args_dict.z_dim), name='att_rep')(att)
     att = Permute((1, 3, 2), name='att_rep_p')(att)
 
+
     # get context vector as weighted sum of image features using att
     w_Vi = Multiply()([att, z_v_linear])
     sumpool = Lambda(lambda x: K.sum(x, axis=-2),
@@ -154,6 +157,7 @@ def get_decoder_model(args_dict, wh, dim, convfeats, prev_words):
     c_vec = TimeDistributed(sumpool, name='c_vec')(w_Vi)
     print(h_out_linear)
     print(c_vec)
+    # c_vec = [?,18,64,512] Expected: [1,18,512]
     atten_out = Add(name='sum_mlp_in')([h_out_linear, c_vec])
     # atten_out = Add(name='sum_mlp_in')([h_out_linear, w_Vi])
     h = TimeDistributed(
@@ -164,16 +168,14 @@ def get_decoder_model(args_dict, wh, dim, convfeats, prev_words):
   predictions = TimeDistributed(
       Dense(num_classes, activation='softmax'), name='out')(h)
 
-  model = Model(name='Decoder-SpatialAtt',
-                inputs=[convfeats, prev_words], outputs=predictions)
+  model = Model(inputs=[convfeats, prev_words], outputs=predictions)
   return model
 
 
 def get_model(args_dict):
   encoder_input_shape = (args_dict.imsize, args_dict.imsize, 3)
 
-  encoder_input = Input(batch_shape=(
-      args_dict.bs, args_dict.imsize, args_dict.imsize, 3), name='image')
+  encoder_input = Input(batch_shape=(args_dict.bs, args_dict.imsize, args_dict.imsize, 3), name='image')
   encoder = get_encoder_model(encoder_input, encoder_input_shape)
 
   wh = encoder.output_shape[1]  # size of conv5
@@ -185,9 +187,8 @@ def get_model(args_dict):
         layer.trainable = False
 
   encoder_output = encoder(encoder_input)
-  convfeats = Input(batch_shape=(args_dict.bs, wh, wh, dim), name='conv')
-  prev_words = Input(batch_shape=(
-      args_dict.bs, args_dict.seqlen), name='prev_words')
+  convfeats = Input(batch_shape=(args_dict.bs, wh, wh, dim), name='convfeats')
+  prev_words = Input(batch_shape=(args_dict.bs, args_dict.seqlen), name='prev_words')
   decoder = get_decoder_model(args_dict, wh, dim, convfeats, prev_words)
 
   decoder_output = decoder([encoder_output, prev_words])
@@ -197,11 +198,24 @@ def get_model(args_dict):
   return model
 
 
+class MyModel(Model):
+
+  def __init__(self, encoder, decoder):
+    super(MyModel, self).__init__()
+    self.encoder = encoder
+    # print(encoder.summary())
+    self.decoder = decoder
+    # print(decoder.summary())
+
+  def call(self, inputs):
+    return self.decoder([self.encoder(inputs[0]), inputs[1]])
+
+
 if __name__ == '__main__':
   # Hardcoded commandline parameter
   args_dict = Args()
   args_dict.mode = 'train'
-  args_dict.bs = 1
+  args_dict.bs = 2
   args_dict.seqlen = 18
   args_dict.vocab_size = 9570
   args_dict.emb_dim = 512
@@ -231,8 +245,8 @@ if __name__ == '__main__':
   # print(x.shape)
   # print(example_text.shape)
 
-  example_text = np.ones([1, 18])
-  img = np.ones([1, 256, 256, 3])
+  example_text = np.ones([args_dict.bs, 18])
+  img = np.ones([args_dict.bs, 256, 256, 3])
 
   features = model.predict([img, example_text])
-  print(features)
+  print([v.shape for v in features])
