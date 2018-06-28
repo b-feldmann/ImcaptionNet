@@ -1,9 +1,7 @@
 import click
-import numpy as np
-from tensorflow.python.keras.applications.resnet50 import preprocess_input
-from tensorflow.python.keras.preprocessing import image
+from build_vocab import Vocabulary
 
-from adaptiveModel import Encoder2Decoder
+from train import train_model
 
 
 @click.group()
@@ -11,16 +9,21 @@ def cli():
     pass
 
 
+
 @cli.command()
-@click.option('--imsize', default=224, help='Image Size')
-@click.option('--vocab-path', help='Path to vocab')
-def train(imsize):
-    img_path = 'data/train2014/COCO_train2014_000000000009.jpg'
-    img = image.load_img(img_path, target_size=(224, 224))
-    x = image.img_to_array(img)
-    x = np.expand_dims(x, axis=0)
-    x = preprocess_input(x)
-    adaptive = Encoder2Decoder(256, len(vocab), 512)
+@click.option('--caption_path')
+@click.option('--vocab_path', help='Path to vocab')
+@click.option('--model_path', help='Path to save model')
+@click.option('--learning_rate', default=4e-4, help='Learning_rate')
+@click.option('--num_epochs', default=50, help='Number of epochs')
+@click.option('--ld', default=20, help='Learning rate decay')
+@click.option('--ld_every', default=50, help='Learning rate decay every')
+@click.option('--alpha', default=0.8, help='Alpha for Adam')
+@click.option('--beta', default=0.999, help='Beta for Adam')
+@click.option('--clip', default=0.1, help='clip')
+@click.option('--logger_step', default=10, help='Logger step')
+def train(caption_path, vocab_path, learning_rate, num_epochs, ld, ld_every, alpha, beta, clip, logger_step, model_path):
+    train_model(caption_path, vocab_path, learning_rate, num_epochs, ld, ld_every, alpha, beta, clip, logger_step, model_path)
 
 
 if __name__ == '__main__':
