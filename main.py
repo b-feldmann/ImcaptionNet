@@ -77,8 +77,9 @@ def get_decoder_model(args_dict, wh, dim, convfeats, prev_words):
                          dropout_W=args_dict.dr_ratio,
                          dropout_U=args_dict.dr_ratio,
                          sentinel=True, name='hs')
-    h, s = lstm_(x)
-
+    h_ = lstm_(x)
+    h = Lambda(lambda x: x[:, :, :args_dict.lstm_dim])(h_)
+    s = Lambda(lambda x: x[:, :, args_dict.lstm_dim:])(h_)
   else:
     # regular lstm
     lstm_ = LSTMSentinel(args_dict.lstm_dim,
@@ -134,7 +135,6 @@ def get_decoder_model(args_dict, wh, dim, convfeats, prev_words):
       z_v_linear = Concatenate(-2)([z_v_linear, z_s_linear])
       z_v_embed = Concatenate(-2)([z_v_embed, z_s_embed])
 
-
     # sum outputs from z_v and z_h
     z = Add(name='merge_v_h')([z_h_embed, z_v_embed])
     if args_dict.dr:
@@ -148,7 +148,6 @@ def get_decoder_model(args_dict, wh, dim, convfeats, prev_words):
     att = TimeDistributed(Activation('softmax'), name='att_scores')(att)
     att = TimeDistributed(RepeatVector(args_dict.z_dim), name='att_rep')(att)
     att = Permute((1, 3, 2), name='att_rep_p')(att)
-
 
     # get context vector as weighted sum of image features using att
     w_Vi = Multiply()([att, z_v_linear])
@@ -175,7 +174,8 @@ def get_decoder_model(args_dict, wh, dim, convfeats, prev_words):
 def get_model(args_dict):
   encoder_input_shape = (args_dict.imsize, args_dict.imsize, 3)
 
-  encoder_input = Input(batch_shape=(args_dict.bs, args_dict.imsize, args_dict.imsize, 3), name='image')
+  encoder_input = Input(batch_shape=(
+      args_dict.bs, args_dict.imsize, args_dict.imsize, 3), name='image')
   encoder = get_encoder_model(encoder_input, encoder_input_shape)
 
   wh = encoder.output_shape[1]  # size of conv5
@@ -188,7 +188,8 @@ def get_model(args_dict):
 
   encoder_output = encoder(encoder_input)
   convfeats = Input(batch_shape=(args_dict.bs, wh, wh, dim), name='convfeats')
-  prev_words = Input(batch_shape=(args_dict.bs, args_dict.seqlen), name='prev_words')
+  prev_words = Input(batch_shape=(
+      args_dict.bs, args_dict.seqlen), name='prev_words')
   decoder = get_decoder_model(args_dict, wh, dim, convfeats, prev_words)
 
   decoder_output = decoder([encoder_output, prev_words])
@@ -224,7 +225,7 @@ if __name__ == '__main__':
   args_dict.dr = False
   args_dict.dr_ratio = 0.5
   args_dict.bn = False
-  args_dict.sgate = False
+  args_dict.sgate = True
   args_dict.attlstm = True
   args_dict.z_dim = 512
   args_dict.cnn_train = False
