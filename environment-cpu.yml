@@ -5,3 +5,6 @@ dependencies:
     - tensorflow
     - h5py
     - Pillow
+    - Cython
+    - git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI
+    - matplotlib
