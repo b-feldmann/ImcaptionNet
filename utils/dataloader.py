@@ -1,11 +1,14 @@
-from skimage.io import imread
-from skimage.transform import resize
+import glob
+import os
+from PIL import Image
 from tensorflow.python.keras.utils import Sequence
 
 
 class COCOSequence(Sequence):
 
   def __init__(self, img_directory, captions_file, batch_size):
+    self.images = glob.glob(os.path.join(img_directory, '*.jpg'))
+
     self.x, self.y = x_set, y_set
     self.batch_size = batch_size
 
