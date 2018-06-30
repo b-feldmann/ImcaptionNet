@@ -117,8 +117,6 @@ def trainloop(args, model, validation_model=None, epoch_start=0, suffix=''):
     results_file = generate_captions(args, validation_model, validation, itow)
 
     metric = coco_metrics(args, results_file)
-    import ipdb
-    ipdb.set_trace()
 
     if metric > best_metric:
       print('Model improved from {} to {}'.format(best_metric, metric))
