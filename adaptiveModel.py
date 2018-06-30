@@ -211,6 +211,12 @@ class Decoder(nn.Module):
 
         # word embedding
         self.embed = nn.Embedding(vocab_size, embed_size)
+        # TODO pretrained Embeddings
+
+        # pretrained_weight is a numpy matrix of shape (num_embeddings, embedding_dim)
+        # embed.weight.data.copy_(torch.from_numpy(pretrained_weight))
+
+        # END pretrained Embeddings
 
         # LSTM decoder: input = [ w_t; v_g ] => 2 x word_embed_size;
         self.LSTM = nn.LSTM(embed_size * 2, hidden_size, 1, batch_first=True)

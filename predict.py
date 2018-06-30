@@ -15,10 +15,6 @@ def single_image_predict(image_path, model_path, vocab_path, crop_size):
 
     model.load_state_dict(torch.load(model_path))
 
-    cnn_subs = list(model.encoder.resnet_conv.children())[5:]
-    cnn_params = [list(sub_module.parameters()) for sub_module in cnn_subs]
-    cnn_params = [item for sublist in cnn_params for item in sublist]
-
     transform = transforms.Compose([
         transforms.Resize((crop_size, crop_size)),
         transforms.ToTensor(),
@@ -28,8 +24,6 @@ def single_image_predict(image_path, model_path, vocab_path, crop_size):
     image = Image.open(image_path).convert('RGB')
     tensor = transform(image)
     predicted_captions, _, _ = model.sampler(tensor.unsqueeze_(0))
-
-
 
     if torch.cuda.is_available():
         captions = predicted_captions.cpu().data.numpy()

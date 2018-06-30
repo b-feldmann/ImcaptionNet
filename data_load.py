@@ -1,9 +1,11 @@
+import json
 import os
 import string
 
 import torch
 import torch.utils.data as data
 from PIL import Image
+from torchvision import datasets
 
 from cocoapi2.PythonAPI.pycocotools.coco import COCO
 
@@ -36,6 +38,7 @@ class CocoDataset(data.Dataset):
         img_id = coco.anns[ann_id]['image_id']
         filename = coco.loadImgs(img_id)[0]['file_name']
 
+        # TODO uncomment
         # if 'val' in filename.lower():
         #     path = 'val2014/' + filename
         # else:
@@ -114,3 +117,34 @@ def get_loader(root, json, vocab, transform, batch_size, shuffle, num_workers):
                                               num_workers=num_workers,
                                               collate_fn=collate_fn)
     return data_loader
+
+
+class CocoEvalLoader(datasets.ImageFolder):
+    def __init__(self, root, ann_path, transform=None,
+                 loader=datasets.folder.default_loader):
+        '''
+        Customized COCO loader to get Image ids and Image Filenames
+        root: path for images
+        ann_path: path for the annotation file (e.g., caption_val2014.json)
+        '''
+        self.folder = root
+        self.transform = transform
+        self.loader = loader
+        self.samples = json.load(open(ann_path, 'r'))['images']
+
+    def __getitem__(self, index):
+
+        filename = self.samples[index]['file_name']
+        img_id = self.samples[index]['id']
+
+        # Filename for the image
+        if 'train' in filename.lower():
+            path = os.path.join(self.folder, 'val2014', filename)
+        else:
+            path = os.path.join(self.folder, 'train2014', filename)
+
+        img = Image.open(path).convert('RGB')
+        if self.transform is not None:
+            img = self.transform(img)
+
+        return img, img_id, filename
