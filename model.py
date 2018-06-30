@@ -1,3 +1,4 @@
+import tensorflow as tf
 from tensorflow.python.keras.applications.resnet50 import ResNet50
 from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.layers import (
@@ -6,6 +7,7 @@ from tensorflow.python.keras.layers import (
     TimeDistributed
 )
 from tensorflow.python.keras import backend as K
+from tensorflow.python.keras.utils import multi_gpu_model
 from layers.lstm_sentinel import LSTMSentinel
 
 
@@ -148,11 +150,7 @@ def get_decoder_model(args, wh, dim, convfeats, prev_words):
     sumpool = Lambda(lambda x: K.sum(x, axis=-2),
                      output_shape=(args.z_dim,))
     c_vec = TimeDistributed(sumpool, name='c_vec')(w_Vi)
-    print(h_out_linear)
-    print(c_vec)
-    # c_vec = [?,18,64,512] Expected: [1,18,512]
     atten_out = Add(name='sum_mlp_in')([h_out_linear, c_vec])
-    # atten_out = Add(name='sum_mlp_in')([h_out_linear, w_Vi])
     h = TimeDistributed(
         Dense(args.emb_dim, activation='tanh'))(atten_out)
     if args.dr:
@@ -191,6 +189,12 @@ def get_model(args):
 
   decoder_output = decoder([encoder_output, prev_words])
 
-  model = Model(inputs=[encoder_input, prev_words], outputs=decoder_output)
+  if args.gpus > 1:
+    with tf.device('/cpu:0'):
+      model = Model(inputs=[encoder_input, prev_words], outputs=decoder_output)
+
+    model = multi_gpu_model(model, args.gpus)
+  else:
+    model = Model(inputs=[encoder_input, prev_words], outputs=decoder_output)
 
   return model

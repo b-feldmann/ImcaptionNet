@@ -1,8 +1,8 @@
-name: imcaptionnet-cpu
+name: imcaptionnet-gpu
 dependencies: 
   - python=3.6.5
   - pip:
-    - tensorflow
+    - tensorflow-gpu
     - h5py
     - Pillow
     - git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI

@@ -8,7 +8,6 @@ def get_parser():
   p.add_argument('-mode', default='train', choices=['train', 'test'])
   p.add_argument('-bs', default=32, type=int)
   p.add_argument('-seqlen', default=18, type=int)
-  p.add_argument('-vocab_size', default=9570, type=int)
   p.add_argument('-emb_dim', default=512, type=int)
   p.add_argument('-imsize', default=256, type=int)
   p.add_argument('-lstm_dim', default=512, type=int)
@@ -35,11 +34,24 @@ def get_parser():
   p.add_argument('-es_metric', default='CIDEr',
                  choices=['loss', 'CIDEr', 'Bleu_4', 'Bleu_3', 'Bleu_2',
                           'Bleu_1', 'ROUGE_L', 'METEOR'])
+  p.add_argument('-es_prev_words', default='gen',
+                 choices=['gt', 'gen'])
 
   # Filesystem Parameter #
   p.add_argument('-model_file', default=None)
+  p.add_argument('-model_name', default='model')
+  p.add_argument('-data_folder', default='../imcaptionnet-model/')
 
   # Train Parameter #
   p.add_argument('-nepochs', default=20, type=int)
+  p.add_argument('-patience', default=5, type=int)
+  p.add_argument('-val_samples', default=640, type=int)
+  p.add_argument('-gpus', default=1, type=int)
+
+  # Vocabulary Parameter #
+  p.add_argument('-vocab_size', default=9591, type=int)
+  p.add_argument('-word_count_threshold', default=5, type=int)
+  p.add_argument('-tokenizer', default='nltk',
+                 choices=['nltk', 'neuraltalk'])
 
   return p
