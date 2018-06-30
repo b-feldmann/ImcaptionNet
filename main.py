@@ -15,12 +15,9 @@ def cli():
 @click.option('--image_path', help='Absolut path to image')
 @click.option('--model_path', help='Absolut path to model')
 @click.option('--vocab_path', help='Absolut path to vocab')
-@click.option('--alpha', default=0.8, type=int, help='Alpha for Adam')
-@click.option('--beta', default=0.999, type=int, help='Beta for Adam')
-@click.option('--cnn_learning_rate', default=1e-4, type=float, help='Learning_rate for CNN')
-@click.option('--crop_size', default=224, type=int, help='Data Augmentation Crop Size')
-def predict(image_path, model_path, vocab_path, alpha, beta, cnn_learning_rate, crop_size):
-    single_image_predict(image_path, model_path, vocab_path, alpha, beta, cnn_learning_rate, crop_size)
+@click.option('--crop_size', default=226, type=int, help='Data Augmentation Crop Size')
+def predict(image_path, model_path, vocab_path, crop_size):
+    single_image_predict(image_path, model_path, vocab_path, crop_size)
 
 
 @cli.command()
@@ -41,10 +38,11 @@ def predict(image_path, model_path, vocab_path, alpha, beta, cnn_learning_rate, 
 @click.option('--num_workers', default=4, type=int, help='Number of workers')
 @click.option('--crop_size', default=224, type=int, help='Data Augmentation Crop Size')
 @click.option('--max_steps', default=None, type=int, help='Max number of images to train')
+@click.option('--shuffle', default=True, type=bool, help='Shuffle dataset')
 def train(image_path, caption_path, vocab_path, learning_rate, num_epochs, ld, ld_every, alpha, beta, clip, logger_step,
-          model_path, crop_size, batch_size, num_workers, cnn_learning_rate, max_steps):
+          model_path, crop_size, batch_size, num_workers, cnn_learning_rate, max_steps, shuffle):
     train_model(image_path, caption_path, vocab_path, learning_rate, num_epochs, ld, ld_every, alpha, beta, clip,
-                logger_step, model_path, crop_size, batch_size, num_workers, cnn_learning_rate, max_steps)
+                logger_step, model_path, crop_size, batch_size, num_workers, cnn_learning_rate, max_steps, shuffle)
 
 
 @cli.command()

@@ -17,7 +17,7 @@ from utils import to_var
 
 
 def train_model(image_dir, caption_path, vocab_path, learning_rate, num_epochs, lrd, lrd_every, alpha, beta, clip,
-                logger_step, model_path, crop_size, batch_size, num_workers, cnn_learning_rate, max_steps=None):
+                logger_step, model_path, crop_size, batch_size, num_workers, cnn_learning_rate, shuffle, max_steps=None):
 
     with open(vocab_path, 'rb') as f:
         vocab = pickle.load(f)
@@ -30,7 +30,7 @@ def train_model(image_dir, caption_path, vocab_path, learning_rate, num_epochs, 
         transforms.Normalize((0.485, 0.456, 0.406),
                              (0.229, 0.224, 0.225))])
 
-    data_loader = get_loader(image_dir, caption_path, vocab,transform, batch_size, shuffle=True, num_workers=num_workers)
+    data_loader = get_loader(image_dir, caption_path, vocab,transform, batch_size, shuffle=shuffle, num_workers=num_workers)
 
     adaptive = Encoder2Decoder(256, len(vocab), 512)
 
@@ -93,7 +93,7 @@ def train_model(image_dir, caption_path, vocab_path, learning_rate, num_epochs, 
             if epoch > 20:
                 cnn_optimizer.step()
 
-        if i % logger_step == 0:
-            print(f'Epoch {epoch}/{num_epochs}, Step {i}/{num_steps}, CrossEntropy Loss: {loss.item()}, Perplexity: {np.exp(loss.item())}')
+            if i % logger_step == 0:
+                print(f'Epoch {epoch}/{num_epochs}, Step {i}/{num_steps}, CrossEntropy Loss: {loss.item()}, Perplexity: {np.exp(loss.item())}')
 
         torch.save(adaptive.state_dict(), os.path.join(model_path, f'adaptive-{epoch}.pkl'))
