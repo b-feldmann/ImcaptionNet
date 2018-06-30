@@ -95,13 +95,10 @@ def trainloop(args, model, validation_model=None, epoch_start=0, suffix=''):
     print("Epoch {}/{}".format(e + 1 + epoch_start, args.nepochs + epoch_start))
     prog = Progbar(target=len(train))
 
-    for i, (x, y, sw) in enumerate(train.once()):
+    for i, (x, y, sw) in enumerate(train.once(args.train_samples)):
       loss = model.train_on_batch(x=x, y=y, sample_weight=sw)
       model.reset_states()
       prog.update(current=i, values=[('loss', loss)])
-      if i == 500:
-        break
-      # TODO train and validation equal vocabulary
 
     print()
     val_prog = Progbar(target=len(validation))

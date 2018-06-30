@@ -46,6 +46,7 @@ def get_parser():
   p.add_argument('-nepochs', default=20, type=int)
   p.add_argument('-patience', default=5, type=int)
   p.add_argument('-val_samples', default=640, type=int)
+  p.add_argument('-train_samples', default=-1, type=int)
   p.add_argument('-gpus', default=1, type=int)
 
   # Vocabulary Parameter #
