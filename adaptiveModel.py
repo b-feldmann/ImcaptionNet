@@ -254,7 +254,7 @@ class Decoder(nn.Module):
             h_t, states = self.LSTM(x_t, states)
 
             # Save hidden and cell
-            hiddens[:, time_step, :] = h_t  # Batch_first
+            hiddens[:, time_step, :] = h_t.squeeze()  # Batch_first
             cells[time_step, :, :] = states[1]
 
         # cell: Batch x seq_len x hidden_size

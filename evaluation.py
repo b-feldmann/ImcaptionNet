@@ -2,28 +2,30 @@ import json
 import pickle
 import torch
 from PIL import Image
+from pycocoevalcap.eval import COCOEvalCap
 from torchvision import transforms
 
 from adaptiveModel import Encoder2Decoder
+from cocoapi2.PythonAPI.pycocotools.coco import COCO
 from data_load import CocoEvalLoader
 from utils import to_var
 
 
 def predict_captions(model, vocab, data_loader):
     result_json = []
-    for i, (images, image_ids, _) in enumerate(data_loader):
-        predicted_captions, _, _ = model.sampler(images)
+    for i, (tensor, image_ids, _) in enumerate(data_loader):
+        predicted_captions, _, _ = model.sampler(to_var(tensor))
         if torch.cuda.is_available():
             captions = predicted_captions.cpu().data.numpy()
         else:
             captions = predicted_captions.data.numpy()
 
-        for tokens in range(captions.shape[0]):
-            token_ids = captions[tokens]
+        for token_ids in range(captions.shape[0]):
+            tokens = captions[token_ids]
 
             generated_captions = []
 
-            for word in token_ids:
+            for word in tokens:
                 word = vocab.idx2word[word]
 
                 if word == '<end>':
@@ -32,6 +34,8 @@ def predict_captions(model, vocab, data_loader):
                     generated_captions.append(word)
 
             result_json.append({'image_id': int(image_ids[token_ids]), 'sentence': " ".join(generated_captions)})
+        if (i + 1) % 10 == 0:
+            print(f'[{i+1}/{len(data_loader)}]')
 
     return result_json
 
@@ -60,3 +64,11 @@ def generate_result_json(model_path, vocab_path, image_root, val_caption_path, r
     result_json = predict_captions(model, vocab, eval_data_loader)
 
     json.dump(result_json, open(result_path, 'w'))
+
+
+def coco_metrics(val_captions_file, result_captions, metric):
+  coco = COCO(val_captions_file)
+  cocoRes = coco.loadRes(result_captions)
+  cocoEval = COCOEvalCap(coco, cocoRes)
+  cocoEval.evaluate()
+  return cocoEval.eval[metric]
