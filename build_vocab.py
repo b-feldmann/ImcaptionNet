@@ -79,7 +79,7 @@ if __name__ == '__main__':
     main(args)
 
 
-def build_vocab(caption_path, result_path, threshold=5):
+def make_vocab(caption_path, result_path, threshold=5):
     vocab = build_vocab(json=caption_path,
                         threshold=threshold)
     vocab_path = result_path

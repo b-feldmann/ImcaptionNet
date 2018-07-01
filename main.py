@@ -1,5 +1,5 @@
 import click
-from build_vocab import Vocabulary, build_vocab
+from build_vocab import Vocabulary, make_vocab
 from evaluation import generate_result_json, coco_metrics
 from predict import single_image_predict
 from resize_images import resize
@@ -15,15 +15,15 @@ def cli():
 @cli.command()
 @click.option('--train_captions_path', help='Path to Train Cpations')
 @click.option('--train_image_root', help='Path to Train image directory')
-@click.option('--vale_image_root', help='Path to Val image directory')
+@click.option('--val_image_root', help='Path to Val image directory')
 @click.option('--output_data_root', help='Path to Root image directory')
-def preprocess(train_captions_path, train_image_root, vale_image_root, output_data_root):
+def preprocess(train_captions_path, train_image_root, val_image_root, output_data_root):
     # build the vocab file
-    build_vocab(train_captions_path, output_data_root + '/annotations/vocab.pkl')
+    make_vocab(train_captions_path, output_data_root + '/annotations/vocab.pkl')
     # resize train images
     resize(train_image_root, output_data_root + '/images', dataset_type='train', year='2014', image_size=256)
     # resize validation images
-    resize(vale_image_root, output_data_root + '/images', dataset_type='val', year='2014', image_size=256)
+    resize(val_image_root, output_data_root + '/images', dataset_type='val', year='2014', image_size=256)
 
 
 @cli.command()
@@ -42,9 +42,9 @@ def predict(image_path, model_path, vocab_path, crop_size):
 @click.option('--model_path', help='Path to save model')
 @click.option('--val_caption_path', help='Path to validation captions')
 @click.option('--evaluation_result_root', help='Path to directory to save predicted captions')
-@click.option('--learning_rate', default=4e-4, type=float, help='Learning_rate for adaptive attention model')
-@click.option('--cnn_learning_rate', default=1e-4, type=float, help='Learning_rate for CNN')
-@click.option('--batch_size', default=60, type=int, help='Size of batches')
+@click.option('--learning_rate', default=5e-4, type=float, help='Learning_rate for adaptive attention model')
+@click.option('--cnn_learning_rate', default=1e-5, type=float, help='Learning_rate for CNN')
+@click.option('--batch_size', default=80, type=int, help='Size of batches')
 @click.option('--num_epochs', default=100, type=int, help='Number of epochs')
 @click.option('--ld', default=20, type=int, help='Learning rate decay')
 @click.option('--ld_every', default=50, type=int, help='Learning rate decay every')
