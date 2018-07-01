@@ -33,7 +33,7 @@ def predict_captions(model, vocab, data_loader):
                 else:
                     generated_captions.append(word)
 
-            result_json.append({'image_id': int(image_ids[token_ids]), 'sentence': " ".join(generated_captions)})
+            result_json.append({'image_id': int(image_ids[token_ids]), 'caption': " ".join(generated_captions)})
         if (i + 1) % 10 == 0:
             print(f'[{i+1}/{len(data_loader)}]')
 
