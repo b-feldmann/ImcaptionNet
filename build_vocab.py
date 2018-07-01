@@ -77,3 +77,14 @@ if __name__ == '__main__':
                         help='minimum word count threshold')
     args = parser.parse_args()
     main(args)
+
+
+def build_vocab(caption_path, result_path, threshold=5):
+    vocab = build_vocab(json=caption_path,
+                        threshold=threshold)
+    vocab_path = result_path
+    with open(vocab_path, 'wb') as f:
+        pickle.dump(vocab, f)
+    print("Total vocabulary size: %d" %len(vocab))
+    print("Saved the vocabulary wrapper to '%s'" %vocab_path)
+

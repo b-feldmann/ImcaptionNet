@@ -38,10 +38,6 @@ class CocoDataset(data.Dataset):
         img_id = coco.anns[ann_id]['image_id']
         filename = coco.loadImgs(img_id)[0]['file_name']
 
-        # TODO uncomment
-        # if 'val' in filename.lower():
-        #     path = 'val2014/' + filename
-        # else:
         path = 'train2014/' + filename
 
         image = Image.open(os.path.join(self.root, path)).convert('RGB')
@@ -133,15 +129,12 @@ class CocoEvalLoader(datasets.ImageFolder):
         self.samples = json.load(open(ann_path, 'r'))['images']
 
     def __getitem__(self, index):
-
         filename = self.samples[index]['file_name']
         img_id = self.samples[index]['id']
 
         # Filename for the image
-        if 'train' in filename.lower():
-            path = os.path.join(self.folder, 'val2014', filename)
-        else:
-            path = os.path.join(self.folder, 'train2014', filename)
+
+        path = os.path.join(self.folder, 'val2014', filename)
 
         img = Image.open(path).convert('RGB')
         if self.transform is not None:
