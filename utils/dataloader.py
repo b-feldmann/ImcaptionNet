@@ -4,6 +4,7 @@ import math
 import nltk
 import random
 import numpy as np
+import time
 from PIL import Image
 from tensorflow.python.keras.utils import Sequence, to_categorical
 from pycocotools.coco import COCO
@@ -13,7 +14,7 @@ from tensorflow.python.keras.applications.resnet50 import preprocess_input
 class COCOSequence(Sequence):
 
   def __init__(self, img_directory, coco, vocab_size, seqlen, batch_size,
-               imgw=256, imgh=256):
+               imgw=256, imgh=256, preprocessed=False):
     self.img_directory = img_directory
     self.coco = coco
     self.ann_ids = list(self.coco.anns.keys())
@@ -23,11 +24,15 @@ class COCOSequence(Sequence):
     self.imgw = imgw
     self.imgh = imgh
     self.return_image_ids = False
+    # If True, images will only be loaded from disk
+    # If False, resize and transform to RGB
+    self.preprocessed = preprocessed
 
   def __len__(self):
     return math.ceil(len(list(self.ann_ids)) / self.batch_size)
 
   def __getitem__(self, index):
+    start = time.time()
     batch_indices = self.ann_ids[index *
                                  self.batch_size:(index + 1) * self.batch_size]
 
@@ -41,8 +46,12 @@ class COCOSequence(Sequence):
       img_ids.append(img_id)
       path = self.coco.loadImgs(img_id)[0]['file_name']
       # Load and Adjust image
-      image = Image.open(os.path.join(self.img_directory, path)).convert('RGB')
-      image = image.resize((self.imgw, self.imgh), Image.ANTIALIAS)
+      if preprocessed:
+        image = Image.open(os.path.join(self.img_directory, path))
+      else:
+        image = Image.open(os.path.join(self.img_directory, path))
+        image = image.convert('RGB')
+        image = image.resize((self.imgw, self.imgh), Image.ANTIALIAS)
       # Pad caption
       padded_tokens = np.zeros((self.seqlen,))
       length = min([len(caption), self.seqlen])
@@ -60,6 +69,7 @@ class COCOSequence(Sequence):
     batch_label_expected = to_categorical(
         batch_label_expected, self.vocab_size)
 
+    print('Batch in: {}'.format(time.time() - start))
     if not self.return_image_ids:
       return [np.array(batch_img), np.array(batch_label_input)], batch_label_expected, batch_sample_weight
     else:

@@ -9,15 +9,18 @@ def get_parser():
   p.add_argument('-bs', default=32, type=int)
   p.add_argument('-seqlen', default=18, type=int)
   p.add_argument('-emb_dim', default=512, type=int)
-  p.add_argument('-imsize', default=256, type=int)
   p.add_argument('-lstm_dim', default=512, type=int)
   p.add_argument('-dr_ratio', default=0.5, type=float)
   p.add_argument('-z_dim', default=512, type=int)
-  p.add_argument('-finetune_start_layer', default=6, type=int)
+  p.add_argument('-finetune_start_layer', default=6, type=int,
+                 help='6 for Resnet50, 18 for InceptionResNetV2')
+
+  p.add_argument('-imgw', default=256, type=int)
+  p.add_argument('-imgh', default=256, type=int)
 
   p.add_argument('--dr', default=False, action='store_true')
   p.add_argument('--bn', default=False, action='store_true')
-  p.add_argument('--sgate', default=False, action='store_true')
+  p.add_argument('--sgate', default=True, action='store_true')
   p.add_argument('--attlstm', default=True, action='store_true')
   p.add_argument('--cnn_train', default=False, action='store_true')
 
@@ -41,6 +44,15 @@ def get_parser():
   p.add_argument('-model_file', default=None)
   p.add_argument('-model_name', default='model')
   p.add_argument('-data_folder', default='../imcaptionnet-model/')
+  p.add_argument('-train_img_dir',
+                 default='/data/dl_lecture_data/TrainVal/train2014')
+  p.add_argument('-train_coco_file',
+                 default='/data/dl_lecture_data/TrainVal/annotations/captions_train2014.json')
+  p.add_argument(
+      '-val_img_dir', default='/data/dl_lecture_data/TrainVal/val2014')
+  p.add_argument('-val_coco_file',
+                 default='/data/dl_lecture_data/TrainVal/annotations/captions_val2014.json')
+  p.add_argument('-preprocessed', default=False, action='store_true')
 
   # Train Parameter #
   p.add_argument('-nepochs', default=20, type=int)

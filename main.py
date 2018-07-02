@@ -14,11 +14,6 @@ from utils.vocabulary import (
 from utils.dataloader import COCOSequence
 from utils.language import predictions_to_captions
 
-img_directory = '/data/dl_lecture_data/TrainVal/train2014'
-captions_file = '/data/dl_lecture_data/TrainVal/annotations/captions_train2014.json'
-
-val_img_directory = '/data/dl_lecture_data/TrainVal/val2014'
-val_captions_file = '/data/dl_lecture_data/TrainVal/annotations/captions_val2014.json'
 val_captions_file_1k = 'captions_val2014_1k.json'
 
 
@@ -74,18 +69,21 @@ def generate_captions(args, model, generator, vocab):
 
 
 def trainloop(args, model, validation_model=None, epoch_start=0, suffix=''):
-  train_coco = COCO(captions_file)
-  val_coco = COCO(val_captions_file)
+  train_coco = COCO(args.train_coco_file)
+  val_coco = COCO(args.val_coco_file)
   vocab, vocab_size, counts = preprocess_captions(
       [train_coco.anns, val_coco.anns], args.word_count_threshold,
       args.tokenizer)
   val_coco = COCO(val_captions_file_1k)
   captions_to_tokens([val_coco.anns], args.tokenizer)
-  caption_tokens_to_id([val_coco.anns], vocab, counts, args.word_count_threshold)
+  caption_tokens_to_id([val_coco.anns], vocab, counts,
+                       args.word_count_threshold)
   train = COCOSequence(
-      img_directory, train_coco, vocab_size, args.seqlen, args.bs)
+      args.train_img_dir, train_coco, vocab_size, args.seqlen, args.bs,
+      args.imgw, args.imgh, args.preprocessed)
   validation = COCOSequence(
-      val_img_directory, val_coco, vocab_size, args.seqlen, args.bs)
+      args.val_img_dir, val_coco, vocab_size, args.seqlen, args.bs,
+      args.imgw, args.imgh, args.preprocessed)
 
   itow = {i + 1: w for i, w in enumerate(vocab)}
 
@@ -98,7 +96,7 @@ def trainloop(args, model, validation_model=None, epoch_start=0, suffix=''):
     for i, (x, y, sw) in enumerate(train.once(samples=args.train_samples)):
       loss = model.train_on_batch(x=x, y=y, sample_weight=sw)
       model.reset_states()
-      prog.update(current=i, values=[('loss', loss)])
+      prog.update(current=i + 1, values=[('loss', loss)])
 
     print()
     val_prog = Progbar(target=len(validation))
@@ -185,6 +183,7 @@ if __name__ == '__main__':
   else:
     model.load_weights(model_name)
 
+  # Train all cnn parts (=finetune_start_layer) of the Encoder
   for i, layer in enumerate(model.layers[1].layers):
     if i > args.finetune_start_layer:
       layer.trainable = True
@@ -192,7 +191,6 @@ if __name__ == '__main__':
   model.compile(optimizer=optimizer, loss='categorical_crossentropy',
                 sample_weight_mode="temporal")
 
-  # Train last N (=finetune_start_layer) of Encoder
   args.cnn_train = True
   args.mode = 'test'
   validation_model = M.get_model(args)

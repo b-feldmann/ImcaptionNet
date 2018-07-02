@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.python.keras.applications.resnet50 import ResNet50
+from tensorflow.python.keras.applications import InceptionResNetV2
 from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.layers import (
     Input, Dense, Activation, Permute, Concatenate, Add, Lambda, Multiply,
@@ -12,15 +13,18 @@ from layers.lstm_sentinel import LSTMSentinel
 
 
 def get_encoder_model(inp, inp_shape):
-  base_resnet50 = ResNet50(
+  base_resnet = InceptionResNetV2(
       include_top=False, weights='imagenet',
       input_tensor=inp,
       input_shape=inp_shape)
-  # EXPERIMENT: Testen ob wir die Activation (-2) oder das Pooling (-1) benutzen
+  # base_resnet = ResNet50(
+  #     include_top=False, weights='imagenet',
+  #     input_tensor=inp,
+  #     input_shape=inp_shape)
   encoder = Model(
       # name='Encoder-Resnet50',
-      inputs=base_resnet50.input,
-      outputs=[base_resnet50.layers[-2].output])
+      inputs=base_resnet.input,
+      outputs=[base_resnet.layers[-2].output], name='Encoder')
   return encoder
 
 
@@ -159,7 +163,8 @@ def get_decoder_model(args, wh, dim, convfeats, prev_words):
   predictions = TimeDistributed(
       Dense(num_classes, activation='softmax'), name='out')(h)
 
-  model = Model(inputs=[convfeats, prev_words], outputs=predictions)
+  model = Model(inputs=[convfeats, prev_words],
+                outputs=predictions, name='Decoder')
   return model
 
 
@@ -168,10 +173,10 @@ def get_model(args):
     seqlen = args.seqlen
   else:
     seqlen = 1
-  encoder_input_shape = (args.imsize, args.imsize, 3)
+  encoder_input_shape = (args.imgw, args.imgh, 3)
 
   encoder_input = Input(batch_shape=(
-      args.model_bs, args.imsize, args.imsize, 3), name='image')
+      args.model_bs, args.imgw, args.imgh, 3), name='image')
   encoder = get_encoder_model(encoder_input, encoder_input_shape)
 
   wh = encoder.output_shape[1]  # size of conv5
@@ -179,8 +184,8 @@ def get_model(args):
 
   if not args.cnn_train:
     for i, layer in enumerate(encoder.layers):
-      if i > args.finetune_start_layer:
-        layer.trainable = False
+      # if i > args.finetune_start_layer:
+      layer.trainable = False
 
   encoder_output = encoder(encoder_input)
   convfeats = Input(batch_shape=(args.model_bs, wh, wh, dim), name='convfeats')
