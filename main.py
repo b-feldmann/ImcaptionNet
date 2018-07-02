@@ -162,6 +162,11 @@ if __name__ == '__main__':
   parser = P.get_parser()
   args = parser.parse_args()
 
+  if args.gpus > 1:
+    args.model_bs = args.bs // args.gpus
+  else:
+    args.model_bs = args.bs
+
   epoch_start = 0
   if not args.model_file:
     # No already trained model specified

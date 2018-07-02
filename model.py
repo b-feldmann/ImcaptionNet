@@ -7,7 +7,7 @@ from tensorflow.python.keras.layers import (
     TimeDistributed
 )
 from tensorflow.python.keras import backend as K
-from tensorflow.python.keras.utils import multi_gpu_model
+from utils.multi_gpu_utils import multi_gpu_model
 from layers.lstm_sentinel import LSTMSentinel
 
 
@@ -171,7 +171,7 @@ def get_model(args):
   encoder_input_shape = (args.imsize, args.imsize, 3)
 
   encoder_input = Input(batch_shape=(
-      args.bs, args.imsize, args.imsize, 3), name='image')
+      args.model_bs, args.imsize, args.imsize, 3), name='image')
   encoder = get_encoder_model(encoder_input, encoder_input_shape)
 
   wh = encoder.output_shape[1]  # size of conv5
@@ -183,8 +183,8 @@ def get_model(args):
         layer.trainable = False
 
   encoder_output = encoder(encoder_input)
-  convfeats = Input(batch_shape=(args.bs, wh, wh, dim), name='convfeats')
-  prev_words = Input(batch_shape=(args.bs, seqlen), name='prev_words')
+  convfeats = Input(batch_shape=(args.model_bs, wh, wh, dim), name='convfeats')
+  prev_words = Input(batch_shape=(args.model_bs, seqlen), name='prev_words')
   decoder = get_decoder_model(args, wh, dim, convfeats, prev_words)
 
   decoder_output = decoder([encoder_output, prev_words])
