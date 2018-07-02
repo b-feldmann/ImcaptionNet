@@ -1,0 +1,33 @@
+name: AdaptiveAttention
+channels:
+  - pytorch
+dependencies:
+  - python=3.6
+  - pytorch==0.4.0
+  - Cython==0.28.3
+  - pip:
+    - absl-py==0.2.2
+    - astor==0.6.2
+    - bleach==1.5.0
+    - click==6.7
+    - cycler==0.10.0
+    - gast==0.2.0
+    - grpcio==1.12.1
+    - h5py==2.8.0
+    - html5lib==0.9999999
+    - kiwisolver==1.0.1
+    - Markdown==2.6.11
+    - matplotlib==2.2.2
+    - nltk==3.3
+    - numpy==1.14.5
+    - Pillow==5.1.0
+    - protobuf==3.6.0
+    - git+https://github.com/sleighsoft/pycocoevalcap.git
+    - git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI
+    - pyparsing==2.2.0
+    - python-dateutil==2.7.3
+    - pytz==2018.4
+    - six==1.11.0
+    - termcolor==1.1.0
+    - Werkzeug==0.14.1
+    - torchvision==0.2.1

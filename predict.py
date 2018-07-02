@@ -13,8 +13,7 @@ def single_image_predict(image_path, model_path, vocab_path, crop_size):
 
     model = Encoder2Decoder(256, len(vocab), 512)
 
-    model.load_state_dict(torch.load(model_path))
-
+    model.load_state_dict(torch.load(model_path, map_location=lambda storage, loc: storage))
     transform = transforms.Compose([
         transforms.Resize((crop_size, crop_size)),
         transforms.ToTensor(),
