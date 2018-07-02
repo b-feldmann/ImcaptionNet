@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.layers import *
 from tensorflow.python.keras import initializers, activations, regularizers
-
+from tensorflow.python.keras._impl.keras.engine.base_layer import shape_type_conversion
 
 class LSTMSentinelCell(Layer):
   """
@@ -44,9 +44,9 @@ class LSTMSentinelCell(Layer):
     self.state_size = [units, units]
     # self.state_size = units
 
+  @shape_type_conversion
   def build(self, input_shape):
     input_dim = input_shape[1]
-    self.input_dim = input_dim
 
     self.W_i = self.add_weight(
         shape=(input_dim, self.units), name='{}_W_i'.format(self.name),
