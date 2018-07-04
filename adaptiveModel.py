@@ -195,8 +195,8 @@ class AdaptiveBlock(nn.Module):
         weight = next(self.parameters()).data
 
         if torch.cuda.is_available():
-            return (Variable(weight.new(1, bsz, self.hidden_size).zero_().cuda()),
-                    Variable(weight.new(1, bsz, self.hidden_size).zero_().cuda()))
+            return (Variable(weight.new(1, bsz, self.hidden_size).zero_()),
+                    Variable(weight.new(1, bsz, self.hidden_size).zero_()))
         else:
             return (Variable(weight.new(1, bsz, self.hidden_size).zero_()),
                     Variable(weight.new(1, bsz, self.hidden_size).zero_()))
@@ -238,8 +238,8 @@ class Decoder(nn.Module):
         # Hiddens: Batch x seq_len x hidden_size
         # Cells: seq_len x Batch x hidden_size, default setup by Pytorch
         if torch.cuda.is_available():
-            hiddens = Variable(torch.zeros(x.size(0), x.size(1), self.hidden_size).cuda())
-            cells = Variable(torch.zeros(x.size(1), x.size(0), self.hidden_size).cuda())
+            hiddens = Variable(torch.zeros(x.size(0), x.size(1), self.hidden_size))
+            cells = Variable(torch.zeros(x.size(1), x.size(0), self.hidden_size))
         else:
             hiddens = Variable(torch.zeros(x.size(0), x.size(1), self.hidden_size))
             cells = Variable(torch.zeros(x.size(1), x.size(0), self.hidden_size))
@@ -317,7 +317,8 @@ class Encoder2Decoder(nn.Module):
 
         # Build the starting token Variable <start> (index 1): B x 1
         if torch.cuda.is_available():
-            captions = Variable(torch.LongTensor(images.size(0), 1).fill_(1).cuda())
+            #captions = Variable(torch.LongTensor(images.size(0), 1).fill_(1))
+            captions = Variable(torch.LongTensor(images.size(0), 1).fill_(1)) #buggy on my windows with cuda gpu
         else:
             captions = Variable(torch.LongTensor(images.size(0), 1).fill_(1))
 
@@ -330,7 +331,7 @@ class Encoder2Decoder(nn.Module):
         states = None
 
         for i in range(max_len):
-            scores, states, atten_weights, beta = self.decoder(V, v_g, captions, states)
+            scores, states, atten_weights, beta = self.decoder(V, v_g, captions.cpu(), states)
             predicted = scores.max(2)[1]  # argmax
             captions = predicted
 
