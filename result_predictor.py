@@ -57,7 +57,7 @@ def single_image_predict(image_path, model, vocab, transform, image_size):
     return sentence
 
 
-def generate_predicted_json(image_dir, model_path, vocab_path, result_json_path, crop_size, image_size):
+def generate_predicted_json(image_dir, model_path, vocab_path, result_json_path, crop_size, image_size, use_filenames):
     result_json = []
 
     filenames = all_files_in_dir(image_dir)
@@ -80,7 +80,10 @@ def generate_predicted_json(image_dir, model_path, vocab_path, result_json_path,
     for i, filename in enumerate(filenames):
         sentence = single_image_predict(image_dir + '/' + filename, model, vocab, transform, image_size)
         id = ids[i]
-        result_json.append({'image_id': id, 'caption': sentence})
+        if use_filenames:
+            result_json.append({'image_id': filename.replace('.jpg', ''), 'caption': sentence})
+        else:
+            result_json.append({'image_id': id, 'caption': sentence})
 
     json.dump(result_json, open(result_json_path, 'w'))
 

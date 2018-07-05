@@ -20,8 +20,9 @@ def cli():
 @click.option('--result_json_path', help='Path to output Json')
 @click.option('--image_size', default=256, type=int, help='Path to output Json')
 @click.option('--crop_size', default=224, type=int, help='Crop Size')
-def gen_result_json(image_dir, model_path, vocab_path, result_json_path, crop_size, image_size):
-    generate_predicted_json(image_dir, model_path, vocab_path, result_json_path, crop_size, image_size)
+@click.option('--use_filenames', default=False, type=bool, help='Crop Size')
+def gen_result_json(image_dir, model_path, vocab_path, result_json_path, crop_size, image_size, use_filenames):
+    generate_predicted_json(image_dir, model_path, vocab_path, result_json_path, crop_size, image_size, use_filenames)
 
 
 @cli.command()
