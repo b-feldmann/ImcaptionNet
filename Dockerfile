@@ -8,7 +8,5 @@ RUN apt-get upgrade -y
 COPY . /app
 WORKDIR /app
 
-RUN ls
-
 RUN pip3 install -r ./app/requirements.txt
-
+RUN make -C ./app/cocoapi2/PythonAPI
