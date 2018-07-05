@@ -3,6 +3,7 @@ from build_vocab import Vocabulary, make_vocab
 from evaluation import generate_result_json, coco_metrics
 from predict import single_image_predict
 from resize_images import resize
+from result_predictor import generate_predicted_json
 
 from train import train_model
 
@@ -10,6 +11,17 @@ from train import train_model
 @click.group()
 def cli():
     pass
+
+
+@cli.command()
+@click.option('--image_dir', help='Image directory')
+@click.option('--model_path', help='Path to model path')
+@click.option('--vocab_path', help='Path to vocab File')
+@click.option('--result_json_path', help='Path to output Json')
+@click.option('--image_size', default=256, type=int, help='Path to output Json')
+@click.option('--crop_size', default=224, type=int, help='Crop Size')
+def gen_result_json(image_dir, model_path, vocab_path, result_json_path, crop_size, image_size):
+    generate_predicted_json(image_dir, model_path, vocab_path, result_json_path, crop_size, image_size)
 
 
 @cli.command()
@@ -57,12 +69,13 @@ def predict(image_path, model_path, vocab_path, crop_size):
 @click.option('--max_steps', default=None, type=int, help='Max number of images to train')
 @click.option('--shuffle', default=True, type=bool, help='Shuffle dataset')
 @click.option('--eval_size', default=28, type=int, help='Evaluation size')
+@click.option('--pretrained', default=None, type=str, help='Path to pretrained model')
 def train(image_path, caption_path, vocab_path, learning_rate, num_epochs, ld, ld_every, alpha, beta, clip, logger_step,
           model_path, crop_size, batch_size, num_workers, cnn_learning_rate, max_steps, shuffle, val_caption_path,
-          eval_size, evaluation_result_root):
+          eval_size, evaluation_result_root, pretrained):
     train_model(image_path, caption_path, val_caption_path, vocab_path, learning_rate, num_epochs, ld, ld_every, alpha,
                 beta, clip, logger_step, model_path, crop_size, batch_size, num_workers, cnn_learning_rate, shuffle,
-                eval_size, evaluation_result_root, max_steps)
+                eval_size, evaluation_result_root, pretrained, max_steps)
 
 
 @cli.command()
@@ -81,15 +94,13 @@ def resize_images(image_dir, output_dir):
 @click.option('--crop_size', default=224, type=int, help='Crop Size')
 @click.option('--eval_size', default=2, type=int, help='Size of evaluation')
 @click.option('--num_workers', default=4, type=int, help='Number of workers')
-def generate_result_captions(model_path, vocab_path, image_root, val_caption_path, result_path, crop_size, eval_size, num_workers):
+def generate_result_captions(model_path, vocab_path, image_root, val_caption_path, result_path, crop_size, eval_size,
+                             num_workers):
     generate_result_json(model_path, vocab_path, image_root, val_caption_path, result_path, crop_size, eval_size,
                          num_workers)
 
 
 @cli.command()
-@click.option('--val_captions_file', type=str, help='Path to validation captions file')
-@click.option('--result_captions', type=str, help='Path to predicted captions file')
-@click.option('--metric', default='CIDEr', type=str, help='Metric')
 def evaluate(val_captions_file, result_captions, metric):
     print(coco_metrics(val_captions_file, result_captions, metric))
 
