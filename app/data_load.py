@@ -7,7 +7,7 @@ import torch.utils.data as data
 from PIL import Image
 from torchvision import datasets
 
-from cocoapi2.PythonAPI.pycocotools.coco import COCO
+from app.cocoapi2.PythonAPI.pycocotools import COCO
 
 
 class CocoDataset(data.Dataset):

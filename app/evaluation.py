@@ -47,7 +47,7 @@ def generate_result_json(model_path, vocab_path, image_root, val_caption_path, r
 
     model = Encoder2Decoder(256, len(vocab), 512)
 
-    model.load_state_dict(torch.load(model_path))
+    model.load_state_dict(torch.load(model_path, map_location='cpu'))
 
     transform = transforms.Compose([
         transforms.Resize((crop_size, crop_size)),
@@ -62,13 +62,12 @@ def generate_result_json(model_path, vocab_path, image_root, val_caption_path, r
         drop_last=False)
 
     result_json = predict_captions(model, vocab, eval_data_loader)
-
     json.dump(result_json, open(result_path, 'w'))
 
 
 def coco_metrics(val_captions_file, result_captions, metric):
-  coco = COCO(val_captions_file)
-  cocoRes = coco.loadRes(result_captions)
-  cocoEval = COCOEvalCap(coco, cocoRes)
-  cocoEval.evaluate()
-  return cocoEval.eval[metric]
+    coco = COCO(val_captions_file)
+    cocoRes = coco.loadRes(result_captions)
+    cocoEval = COCOEvalCap(coco, cocoRes)
+    cocoEval.evaluate()
+    return cocoEval.eval[metric]

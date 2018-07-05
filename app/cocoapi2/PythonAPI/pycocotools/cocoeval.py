@@ -15,7 +15,8 @@ class COCOeval:
     #  E = CocoEval(cocoGt,cocoDt); # initialize CocoEval object
     #  E.params.recThrs = ...;      # set parameters as desired
     #  E.evaluate();                # run per image evaluation
-    #  E.accumulate();              # accumulate per image results
+    #  E.ac
+    # cumulate();              # accumulate per image results
     #  E.summarize();               # display summary metrics of results
     # For example usage see evalDemo.m and http://mscoco.org/.
     #

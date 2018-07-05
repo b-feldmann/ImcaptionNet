@@ -1,8 +1,10 @@
-import nltk
-import pickle
 import argparse
+import pickle
 from collections import Counter
-from cocoapi2.PythonAPI.pycocotools.coco import COCO
+
+import nltk
+
+from app.cocoapi2.PythonAPI.pycocotools import COCO
 
 
 class Vocabulary(object):
