@@ -71,6 +71,8 @@ def generate_predicted_json(image_dir, model_path, vocab_path, result_json_path,
 
     model.load_state_dict(torch.load(model_path, map_location='cpu'))
 
+    model.eval()
+
     transform = transforms.Compose([
         transforms.Resize((crop_size, crop_size)),
         transforms.ToTensor(),
