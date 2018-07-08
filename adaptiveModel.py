@@ -349,20 +349,6 @@ class Encoder2Decoder(nn.Module):
         return sampled_ids, attention, Beta
 
     def beam_sampler(self, images, beam_width, max_len=20):
-        # Data parallelism if multiple GPUs
-        if torch.cuda.device_count() > 1:
-            device_ids = range(torch.cuda.device_count())
-            encoder_parallel = torch.nn.DataParallel(self.encoder, device_ids=device_ids)
-            V, v_g = encoder_parallel(images)
-        else:
-            V, v_g = self.encoder(images)
-
-        # Build the starting token Variable <start> (index 1): B x 1
-        if torch.cuda.is_available():
-            captions = Variable(torch.LongTensor(images.size(0), 1).fill_(1).cuda())
-        else:
-            captions = Variable(torch.LongTensor(images.size(0), 1).fill_(1))
-
         predictions = []
         # TODO Processing 1 image at a time might be slower but easier to implement
         # Process one image at a time
