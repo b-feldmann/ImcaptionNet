@@ -347,3 +347,95 @@ class Encoder2Decoder(nn.Module):
         Beta = torch.cat(Beta, dim=1)
 
         return sampled_ids, attention, Beta
+
+    def beam_sampler(self, images, beam_width, max_len=20):
+        # Data parallelism if multiple GPUs
+        if torch.cuda.device_count() > 1:
+            device_ids = range(torch.cuda.device_count())
+            encoder_parallel = torch.nn.DataParallel(self.encoder, device_ids=device_ids)
+            V, v_g = encoder_parallel(images)
+        else:
+            V, v_g = self.encoder(images)
+
+        # Build the starting token Variable <start> (index 1): B x 1
+        if torch.cuda.is_available():
+            captions = Variable(torch.LongTensor(images.size(0), 1).fill_(1).cuda())
+        else:
+            captions = Variable(torch.LongTensor(images.size(0), 1).fill_(1))
+
+        predictions = []
+        # TODO Processing 1 image at a time might be slower but easier to implement
+        # Process one image at a time
+        for k in range(len(images)):
+            # TODO Slice image k from images
+            image = images[k]
+
+            # TODO Feed image to encoder (maybe add [] for batch_size 1)
+            V, v_g = self.encoder(image)
+
+            # Build the starting token Variable <start> (index 1): 1
+            if torch.cuda.is_available():
+                start_caption = Variable(torch.LongTensor(1).fill_(1).cuda())
+            else:
+                start_caption = Variable(torch.LongTensor(1).fill_(1))
+
+            # Initial hidden states
+            states = None
+
+            class Beam(object):
+              def __init__(self, sequence, score, last_state):
+                self.sequence = sequence
+                self.score = score
+                self.last_state = last_state
+
+            beams = [Beam([], 1.0, None)]
+            done_beams = []
+            start = True
+            while len(beams) > 0:
+                # Remove 1 beam from list of all beams
+                beam = beams.pop()
+                # Special case for first beam because the len(beam.sequence) is used
+                # to track the maximum prediction length
+                if start:
+                  last_caption = start_caption
+                  start = False
+                else:
+                  last_caption = beam.sequence[-1]
+
+                scores, states, _, _ = self.decoder(V, v_g, last_caption, beam.last_state)
+
+                # TODO For each sample in batch of "scores" keep top-"beam_width" scores
+                # TODO Probably have to select the right dimension here.
+                # IN: scores = B x Vocab
+                # OUT: top_scores = B x beam_width
+                # OUT: indices = B x beam_width
+                top_scores, indices = scores.topk(beam_width)
+
+                # TODO Select top_states corresponding to scores
+                # TODO Do I need to clone/copy states?
+                # IN: states = B x STATE_SIZE
+                # OUT: top_states = B x beam_width x STATE_SIZE
+                top_states = states[indices]
+
+                # Indices are caption word IDs
+                # top_captions = B x beam_width
+                top_captions = indices
+
+                # Add new beams
+                for scores, states, captions in zip(top_scores, top_states, top_captions):
+                  for score, state, caption in zip(scores, states, captions):
+                    new_sequence = beam.sequence + [caption]
+                    new_score = beam.score * score
+
+                    # End beam if we predict an END symbol or max length is reached
+                    # TODO What is the ID of the end token?
+                    if caption == end_id or len(new_sequence) == max_len:
+                      done_beams.append(Beam(new_sequence, new_score, None))
+                    else:
+                      beams.append(Beam(new_sequence, new_score, state))
+
+            # Select best beam from beams
+            beams.sort(key=lambda b: b.score)
+            predictions.append(beams[0].sequence)
+
+        return predictions
