@@ -168,7 +168,7 @@ def get_decoder_model(args, wh, dim, convfeats, prev_words):
   return model
 
 
-def get_model(args):
+def get_model(args, cnn_train=False):
   if args.mode == 'train':
     seqlen = args.seqlen
   else:
@@ -184,8 +184,11 @@ def get_model(args):
 
   if not args.cnn_train:
     for i, layer in enumerate(encoder.layers):
-      # if i > args.finetune_start_layer:
       layer.trainable = False
+  else:
+    for i, layer in enumerate(encoder.layers):
+      if i > args.finetune_start_layer:
+        layer.trainable = True
 
   encoder_output = encoder(encoder_input)
   convfeats = Input(batch_shape=(args.model_bs, wh, wh, dim), name='convfeats')
@@ -202,4 +205,5 @@ def get_model(args):
   else:
     model = Model(inputs=[encoder_input, prev_words], outputs=decoder_output)
 
+  import ipdb;ipdb.set_trace()
   return model

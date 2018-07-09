@@ -12,7 +12,7 @@ def get_parser():
   p.add_argument('-lstm_dim', default=512, type=int)
   p.add_argument('-dr_ratio', default=0.5, type=float)
   p.add_argument('-z_dim', default=512, type=int)
-  p.add_argument('-finetune_start_layer', default=6, type=int,
+  p.add_argument('-finetune_start_layer', default=18, type=int,
                  help='6 for Resnet50, 18 for InceptionResNetV2')
 
   p.add_argument('-imgw', default=256, type=int)
@@ -40,9 +40,11 @@ def get_parser():
   p.add_argument('-es_prev_words', default='gen',
                  choices=['gt', 'gen'])
 
-  # Filesystem Parameter #
+  # Model Save/Restoer Parameter #
   p.add_argument('-model_file', default=None)
   p.add_argument('-model_name', default='model')
+
+  # Filesystem Parameter #
   p.add_argument('-data_folder', default='../imcaptionnet-model/')
   p.add_argument('-train_img_dir',
                  default='/data/dl_lecture_data/TrainVal/train2014')
@@ -55,7 +57,10 @@ def get_parser():
   p.add_argument('-preprocessed', default=False, action='store_true')
 
   # Train Parameter #
-  p.add_argument('-nepochs', default=20, type=int)
+  p.add_argument('-current_lang_epoch', default=0, type=int)
+  p.add_argument('-lang_epochs', default=20, type=int)
+  p.add_argument('-current_cnn_epoch', default=0, type=int)
+  p.add_argument('-cnn_epochs', default=20, type=int)
   p.add_argument('-patience', default=5, type=int)
   p.add_argument('-val_samples', default=640, type=int)
   p.add_argument('-train_samples', default=-1, type=int)

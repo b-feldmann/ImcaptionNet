@@ -32,7 +32,6 @@ class COCOSequence(Sequence):
     return math.ceil(len(list(self.ann_ids)) / self.batch_size)
 
   def __getitem__(self, index):
-    start = time.time()
     batch_indices = self.ann_ids[index *
                                  self.batch_size:(index + 1) * self.batch_size]
 
@@ -46,7 +45,7 @@ class COCOSequence(Sequence):
       img_ids.append(img_id)
       path = self.coco.loadImgs(img_id)[0]['file_name']
       # Load and Adjust image
-      if preprocessed:
+      if self.preprocessed:
         image = Image.open(os.path.join(self.img_directory, path))
       else:
         image = Image.open(os.path.join(self.img_directory, path))
@@ -69,7 +68,6 @@ class COCOSequence(Sequence):
     batch_label_expected = to_categorical(
         batch_label_expected, self.vocab_size)
 
-    print('Batch in: {}'.format(time.time() - start))
     if not self.return_image_ids:
       return [np.array(batch_img), np.array(batch_label_input)], batch_label_expected, batch_sample_weight
     else:

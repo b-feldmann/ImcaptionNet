@@ -89,7 +89,7 @@ def trainloop(args, model, validation_model=None, epoch_start=0, suffix=''):
 
   wait = 0
   best_metric = -np.inf
-  for e in range(args.nepochs):
+  for e in range(epoch_start, args.nepochs):
     print("Epoch {}/{}".format(e + 1 + epoch_start, args.nepochs + epoch_start))
     prog = Progbar(target=len(train))
 
@@ -98,7 +98,7 @@ def trainloop(args, model, validation_model=None, epoch_start=0, suffix=''):
       model.reset_states()
       prog.update(current=i + 1, values=[('loss', loss)])
 
-    print()
+    print('Validation')
     val_prog = Progbar(target=len(validation))
     val_losses = []
     for i, (x, y, sw) in enumerate(validation.once(samples=args.val_samples)):
@@ -133,11 +133,16 @@ def trainloop(args, model, validation_model=None, epoch_start=0, suffix=''):
       print('Waited too long. Stopping training!')
       break
 
-  return model,
+  model_name = os.path.join(
+      args.data_folder, 'models',
+      args.model_name + suffix + '_weights_e' + str(e) + '_lang_finished.h5')
+  os.makedirs(os.path.dirname(model_name), exist_ok=True)
+  model.save_weights(model_name)
+  return model, model_name
 
 
-def init_models(args):
-  model = M.get_model(args)
+def init_models(args, cnn_train=False):
+  model = M.get_model(args, cnn_train)
   optimizer = config.get_optimizer(args)
   model.compile(optimizer=optimizer, loss='categorical_crossentropy',
                 sample_weight_mode="temporal")
@@ -165,39 +170,25 @@ if __name__ == '__main__':
   else:
     args.model_bs = args.bs
 
-  epoch_start = 0
-  if not args.model_file:
-    # No already trained model specified
+  model_name = None
+
+  # Train Language Model
+  if args.current_lang_epoch < args.lang_epochs:
     model, validation_model = init_models(args)
-    _, model_name = trainloop(args, model, validation_model)
-    epoch_start = args.nepochs
+    if args.model_file:
+      model.load_weights(args.model_file)
+    _, model_name = trainloop(args, model, validation_model,
+                              epoch_start=args.current_lang_epoch)
     del model
     K.clear_session()
 
-  model = M.get_model(args)
-  optimizer = config.get_optimizer(args)
-
-  if args.model_file:
-    print('Loading model weights from snapshot: {}'.format(args.model_file))
-    model.load_weights(args.model_file)
-  else:
-    model.load_weights(model_name)
-
-  # Train all cnn parts (=finetune_start_layer) of the Encoder
-  for i, layer in enumerate(model.layers[1].layers):
-    if i > args.finetune_start_layer:
-      layer.trainable = True
-
-  model.compile(optimizer=optimizer, loss='categorical_crossentropy',
-                sample_weight_mode="temporal")
-
-  args.cnn_train = True
-  args.mode = 'test'
-  validation_model = M.get_model(args)
-  validation_model.compile(
-      optimizer=optimizer, loss='categorical_crossentropy',
-      sample_weight_mode="temporal")
-  args.mode = 'train'
-  model, model_name = trainloop(
-      args, model, suff_name='_cnn_train', model_val=validation_model,
-      epoch_start=epoch_start)
+  if args.current_cnn_epoch < args.cnn_epochs:
+    model, validation_model = init_models(args, cnn_train=True)
+    if model_name:
+      model.load_weights(model_name)
+    elif args.model_file:
+      model.load_weights(args.model_file)
+    else:
+      raise ValueError('Finetuning cnn without trained language model!')
+    trainloop(args, model, suff_name='_cnn_train', model_val=validation_model,
+              epoch_start=args.current_cnn_epoch)
