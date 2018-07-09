@@ -1,13 +1,12 @@
 import json
 import os
-
 import pickle
 
 import torch
 from PIL import Image
 from torchvision import transforms
 
-from adaptiveModel import Encoder2Decoder
+from app.adaptiveModel import Encoder2Decoder
 
 
 def all_files_in_dir(root):
@@ -69,9 +68,9 @@ def generate_predicted_json(image_dir, model_path, vocab_path, result_json_path,
 
     model = Encoder2Decoder(256, len(vocab), 512)
 
-    model.load_state_dict(torch.load(model_path, map_location='cpu'))
-
     model.eval()
+
+    model.load_state_dict(torch.load(model_path, map_location='cpu'))
 
     transform = transforms.Compose([
         transforms.Resize((crop_size, crop_size)),

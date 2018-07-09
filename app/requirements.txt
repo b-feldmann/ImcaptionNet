@@ -21,6 +21,7 @@ python-dateutil==2.7.3
 pytz==2018.4
 six==1.11.0
 tensorboard==1.8.0
+tensorflow==1.8.0
 termcolor==1.1.0
 torch==0.4.0
 torchvision==0.2.1
