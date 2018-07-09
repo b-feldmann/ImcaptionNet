@@ -6,9 +6,7 @@ RUN apt-get install -y git
 RUN apt-get upgrade -y
 
 ADD . /app
-RUN mkdir -p test/data
-RUN mkdir -p test/pred
 WORKDIR /app
 
-RUN pip3 install -r ./app/requirements.txt
+RUN pip3 install -r requirements.txt
 # CMD ["python3", "./main.py"]
