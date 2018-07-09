@@ -1,29 +1,15 @@
 import json
-import os
 import pickle
-
 import torch
 from PIL import Image
 from torchvision import transforms
-
-from app.adaptiveModel import Encoder2Decoder
-
-
-def all_files_in_dir(root):
-    filenames = []
-    for file in os.listdir(root):
-        if file.endswith(".jpg"):
-            filenames.append(file)
-    return filenames
+from adaptiveModel import Encoder2Decoder
 
 
-def get_image_ids(filenames):
-    ids = []
-    for filename in filenames:
-        idstring = filename.split('_')[2]
-        idstring = idstring.replace('.jpg', '')
-        ids.append(int(idstring))
-    return ids
+def load_json(root):
+    with open(root + '/input.json') as file:
+        json_data = json.load(file)
+    return json_data['images']
 
 
 def single_image_predict(image_path, model, vocab, transform, image_size):
@@ -59,9 +45,7 @@ def single_image_predict(image_path, model, vocab, transform, image_size):
 def generate_predicted_json(image_dir, model_path, vocab_path, result_json_path, crop_size, image_size, use_filenames):
     result_json = []
 
-    filenames = all_files_in_dir(image_dir)
-
-    ids = get_image_ids(filenames)
+    images = load_json(image_dir)
 
     with open(vocab_path, 'rb') as f:
         vocab = pickle.load(f)
@@ -78,11 +62,12 @@ def generate_predicted_json(image_dir, model_path, vocab_path, result_json_path,
         transforms.Normalize((0.485, 0.456, 0.406),
                              (0.229, 0.224, 0.225))])
 
-    for i, filename in enumerate(filenames):
+    for i, image in enumerate(images):
+        filename = image['file_name']
+        id = image['id']
         sentence = single_image_predict(image_dir + '/' + filename, model, vocab, transform, image_size)
-        id = ids[i]
         if use_filenames:
-            result_json.append({'image_id': filename.replace('.jpg', ''), 'caption': sentence})
+            result_json.append({'image_id': filename, 'caption': sentence})
         else:
             result_json.append({'image_id': id, 'caption': sentence})
 
