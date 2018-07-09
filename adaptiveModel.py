@@ -348,22 +348,22 @@ class Encoder2Decoder(nn.Module):
 
         return sampled_ids, attention, Beta
 
-    def beam_sampler(self, images, beam_width, max_len=20):
+    def beam_sampler(self, images, beam_width=1, max_len=20):
         predictions = []
         # TODO Processing 1 image at a time might be slower but easier to implement
         # Process one image at a time
         for k in range(len(images)):
             # TODO Slice image k from images
             image = images[k]
-
+            image = image.unsqueeze(0)
             # TODO Feed image to encoder (maybe add [] for batch_size 1)
             V, v_g = self.encoder(image)
 
             # Build the starting token Variable <start> (index 1): 1
             if torch.cuda.is_available():
-                start_caption = Variable(torch.LongTensor(1).fill_(1).cuda())
+                start_caption = Variable(torch.LongTensor(1, 1).fill_(1).cuda())
             else:
-                start_caption = Variable(torch.LongTensor(1).fill_(1))
+                start_caption = Variable(torch.LongTensor(1, 1).fill_(1))
 
             # Initial hidden states
             states = None
@@ -386,8 +386,10 @@ class Encoder2Decoder(nn.Module):
                   last_caption = start_caption
                   start = False
                 else:
-                  last_caption = beam.sequence[-1]
+                  last_caption = beam.sequence[-1].unsqueeze(0)
 
+                # captions = torch.Size([1,1])
+                # states = tuple(torch(1,1,..),torch(1,1,...))
                 scores, states, _, _ = self.decoder(V, v_g, last_caption, beam.last_state)
 
                 # TODO For each sample in batch of "scores" keep top-"beam_width" scores
@@ -401,27 +403,26 @@ class Encoder2Decoder(nn.Module):
                 # TODO Do I need to clone/copy states?
                 # IN: states = B x STATE_SIZE
                 # OUT: top_states = B x beam_width x STATE_SIZE
-                top_states = states[indices]
 
                 # Indices are caption word IDs
                 # top_captions = B x beam_width
                 top_captions = indices
 
                 # Add new beams
-                for scores, states, captions in zip(top_scores, top_states, top_captions):
-                  for score, state, caption in zip(scores, states, captions):
+                for scores, captions in zip(top_scores, top_captions):
+                  for score, caption in zip(scores, captions):
                     new_sequence = beam.sequence + [caption]
                     new_score = beam.score * score
 
                     # End beam if we predict an END symbol or max length is reached
                     # TODO What is the ID of the end token?
-                    if caption == end_id or len(new_sequence) == max_len:
+                    if caption == 2 or len(new_sequence) == max_len:
                       done_beams.append(Beam(new_sequence, new_score, None))
                     else:
-                      beams.append(Beam(new_sequence, new_score, state))
+                      beams.append(Beam(new_sequence, new_score, states))
 
             # Select best beam from beams
-            beams.sort(key=lambda b: b.score)
-            predictions.append(beams[0].sequence)
+            done_beams.sort(key=lambda b: b.score)
+            predictions.append(torch.cat(done_beams[0].sequence, dim=0))
 
-        return predictions
+        return torch.stack(predictions)
