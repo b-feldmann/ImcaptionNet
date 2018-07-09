@@ -72,4 +72,5 @@ def generate_predicted_json(image_dir, model_path, vocab_path, result_json_path,
             result_json.append({'image_id': id, 'caption': sentence})
 
     json.dump(result_json, open(result_json_path, 'w'))
+    print('Generated captions successfully')
 
