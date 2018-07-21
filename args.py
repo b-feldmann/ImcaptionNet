@@ -19,10 +19,8 @@ def get_parser():
   p.add_argument('-imgh', default=256, type=int)
 
   p.add_argument('--dr', default=False, action='store_true')
-  p.add_argument('--bn', default=False, action='store_true')
   p.add_argument('--sgate', default=True, action='store_true')
   p.add_argument('--attlstm', default=True, action='store_true')
-  p.add_argument('--cnn_train', default=False, action='store_true')
 
   # Optimizer Parameter #
   p.add_argument('-optimizer', default='adam',
@@ -32,6 +30,7 @@ def get_parser():
   p.add_argument('-clip', default=5, type=float)
   p.add_argument('-alpha', default=0.9, type=float)
   p.add_argument('-beta', default=0.999, type=float)
+  p.add_argument('-cnn_lr', default=1e-4, type=float)
 
   # Callback / Validation Parameter #
   p.add_argument('-es_metric', default='CIDEr',
@@ -60,7 +59,7 @@ def get_parser():
   p.add_argument('-current_lang_epoch', default=0, type=int)
   p.add_argument('-lang_epochs', default=20, type=int)
   p.add_argument('-current_cnn_epoch', default=0, type=int)
-  p.add_argument('-cnn_epochs', default=20, type=int)
+  p.add_argument('-cnn_epochs', default=30, type=int)
   p.add_argument('-patience', default=5, type=int)
   p.add_argument('-val_samples', default=640, type=int)
   p.add_argument('-train_samples', default=-1, type=int)

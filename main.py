@@ -25,7 +25,7 @@ def coco_metrics(args, results_file):
   return cocoEval.eval[args.es_metric]
 
 
-def generate_captions(args, model, generator, vocab):
+def generate_captions(args, model, generator, itow, epoch):
   captions = []
   # HACK: Track image_ids so we do not generate duplicates
   img_ids = []
@@ -35,7 +35,8 @@ def generate_captions(args, model, generator, vocab):
       preds = model.predict_on_batch([img, input_caption])
       word_idxs = np.argmax(preds, axis=-1)
     else:
-      prevs = np.zeros((args.bs, 1))
+      # <start> token is 1 indexed
+      prevs = np.ones((args.bs, 1))
       word_idxs = np.zeros((args.bs, args.seqlen))
       for i in range(args.seqlen):
         # get predictions
@@ -46,7 +47,7 @@ def generate_captions(args, model, generator, vocab):
         prevs = np.reshape(prevs, (args.bs, 1))
     model.reset_states()
 
-    caps = predictions_to_captions(word_idxs, vocab)
+    caps = predictions_to_captions(word_idxs, itow)
     for i, caption in enumerate(caps):
       if i > len(image_ids) - 1:
         # Last batch might be smaller
@@ -59,8 +60,9 @@ def generate_captions(args, model, generator, vocab):
       captions.append({"image_id": img_id,
                        "caption": caption.split('<eos>')[0]})
 
-  results_file = os.path.join(args.data_folder, 'results',
-                              args.model_name + '_gencaps_val.json')
+  results_file = os.path.join(
+      args.data_folder, 'results',
+      args.model_name + '_gencaps_val_e{}'.format(epoch) + '.json')
   os.makedirs(os.path.dirname(results_file), exist_ok=True)
   with open(results_file, 'w+') as outfile:
     json.dump(captions, outfile)
@@ -68,7 +70,8 @@ def generate_captions(args, model, generator, vocab):
   return results_file
 
 
-def trainloop(args, model, validation_model=None, epoch_start=0, suffix=''):
+def trainloop(args, model, epoch_start=0, epoch_end=0, validation_model=None,
+              suffix=''):
   train_coco = COCO(args.train_coco_file)
   val_coco = COCO(args.val_coco_file)
   vocab, vocab_size, counts = preprocess_captions(
@@ -78,21 +81,24 @@ def trainloop(args, model, validation_model=None, epoch_start=0, suffix=''):
   captions_to_tokens([val_coco.anns], args.tokenizer)
   caption_tokens_to_id([val_coco.anns], vocab, counts,
                        args.word_count_threshold)
+
+  eos_id = vocab.index('<eos>') + 1
   train = COCOSequence(
-      args.train_img_dir, train_coco, vocab_size, args.seqlen, args.bs,
+      args.train_img_dir, train_coco, vocab_size, args.seqlen, args.bs, eos_id,
       args.imgw, args.imgh, args.preprocessed)
   validation = COCOSequence(
-      args.val_img_dir, val_coco, vocab_size, args.seqlen, args.bs,
+      args.val_img_dir, val_coco, vocab_size, args.seqlen, args.bs, eos_id,
       args.imgw, args.imgh, args.preprocessed)
 
   itow = {i + 1: w for i, w in enumerate(vocab)}
 
   wait = 0
   best_metric = -np.inf
-  for e in range(epoch_start, args.nepochs):
-    print("Epoch {}/{}".format(e + 1 + epoch_start, args.nepochs + epoch_start))
+  for e in range(epoch_start, epoch_end):
+    print("Epoch {}/{}".format(e + 1, epoch_end))
     prog = Progbar(target=len(train))
 
+    train.shuffle()
     for i, (x, y, sw) in enumerate(train.once(samples=args.train_samples)):
       loss = model.train_on_batch(x=x, y=y, sample_weight=sw)
       model.reset_states()
@@ -112,7 +118,8 @@ def trainloop(args, model, validation_model=None, epoch_start=0, suffix=''):
     os.makedirs(os.path.dirname(aux_model), exist_ok=True)
     model.save_weights(aux_model, overwrite=True)
     validation_model.load_weights(aux_model)
-    results_file = generate_captions(args, validation_model, validation, itow)
+    results_file = generate_captions(
+        args, validation_model, validation, itow, e)
 
     metric = coco_metrics(args, results_file)
 
@@ -128,6 +135,11 @@ def trainloop(args, model, validation_model=None, epoch_start=0, suffix=''):
       model.save_weights(model_name)
     else:
       wait += 1
+      model_name = os.path.join(
+          args.data_folder, 'models',
+          args.model_name + suffix + '_weights_e' + str(e) + '.h5')
+      os.makedirs(os.path.dirname(model_name), exist_ok=True)
+      model.save_weights(model_name)
 
     if wait > args.patience:
       print('Waited too long. Stopping training!')
@@ -138,27 +150,18 @@ def trainloop(args, model, validation_model=None, epoch_start=0, suffix=''):
       args.model_name + suffix + '_weights_e' + str(e) + '_lang_finished.h5')
   os.makedirs(os.path.dirname(model_name), exist_ok=True)
   model.save_weights(model_name)
-  return model, model_name
+  return model_name
 
 
-def init_models(args, cnn_train=False):
-  model = M.get_model(args, cnn_train)
+def init_model(args, mode):
+  tmp_mode = args.mode
+  args.mode = mode
+  model, encoder, decoder = M.get_model(args)
   optimizer = config.get_optimizer(args)
   model.compile(optimizer=optimizer, loss='categorical_crossentropy',
                 sample_weight_mode="temporal")
-
-  # Validation Model for EarlyStopping
-  if not args.es_metric == 'loss':
-    args.mode = 'test'
-    validation_model = M.get_model(args)
-    validation_model.compile(
-        optimizer=optimizer, loss='categorical_crossentropy',
-        sample_weight_mode="temporal")
-    args.mode = 'train'
-  else:
-    validation_model = None
-
-  return model, validation_model
+  args.mode = tmp_mode
+  return model, encoder, decoder
 
 
 if __name__ == '__main__':
@@ -174,21 +177,46 @@ if __name__ == '__main__':
 
   # Train Language Model
   if args.current_lang_epoch < args.lang_epochs:
-    model, validation_model = init_models(args)
+    print('Training Language Model')
+    model, _, _ = init_model(args, 'train')
+    validation_model, _, _ = init_model(args, 'test')
     if args.model_file:
+      print('Restoring model from file {}'.format(args.model_file))
       model.load_weights(args.model_file)
-    _, model_name = trainloop(args, model, validation_model,
-                              epoch_start=args.current_lang_epoch)
-    del model
+    model_name = trainloop(args, model, validation_model=validation_model,
+                           epoch_start=args.current_lang_epoch,
+                           epoch_end=args.lang_epochs)
     K.clear_session()
 
+  # Finetune CNN Model
   if args.current_cnn_epoch < args.cnn_epochs:
-    model, validation_model = init_models(args, cnn_train=True)
+    print('Finetuning CNN')
+    args.lr = args.cnn_lr
+    model, encoder, _ = init_model(args, 'train')
+    validation_model, validation_encoder, _ = init_model(args, 'test')
     if model_name:
+      print('Restoring model from file {}'.format(model_name))
       model.load_weights(model_name)
     elif args.model_file:
+      print('Restoring model from file {}'.format(args.model_file))
       model.load_weights(args.model_file)
     else:
       raise ValueError('Finetuning cnn without trained language model!')
-    trainloop(args, model, suff_name='_cnn_train', model_val=validation_model,
-              epoch_start=args.current_cnn_epoch)
+    optimizer = config.get_optimizer(args)
+    # Activate cnn layers of model
+    for i, layer in enumerate(encoder.layers):
+      if i > args.finetune_start_layer:
+        layer.trainable = True
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy',
+                  sample_weight_mode="temporal")
+    # Activate cnn layers of validation model
+    for i, layer in enumerate(validation_encoder.layers):
+      if i > args.finetune_start_layer:
+        layer.trainable = True
+    validation_model.compile(
+        optimizer=optimizer, loss='categorical_crossentropy',
+        sample_weight_mode="temporal")
+    trainloop(args, model, suffix='_cnn',
+              validation_model=validation_model,
+              epoch_start=args.current_cnn_epoch,
+              epoch_end=args.cnn_epochs)
